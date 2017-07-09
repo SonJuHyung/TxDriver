@@ -195,7 +195,7 @@ int spdk_init(void){
     return TXDRIVER_SUCCESS;
 }
 
-int spdk_alloc(void){
+int spdk_alloc_qpair(void){
 	struct ns_entry *ns_entry;
 	ns_entry = g_namespaces;
 
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
     res = spdk_init(); 
     TXD_FAIL(res);
 
-    res = spdk_alloc(); 
+    res = spdk_alloc_qpair(); 
     TXD_FAIL(res);
 
     res = spdk_write(&params_w); 
