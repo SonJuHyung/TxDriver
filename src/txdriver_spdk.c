@@ -9,18 +9,36 @@
 
 #include "txdriver.h"
 
+/*
+ *
+ */
 struct ctrlr_entry {
 	struct spdk_nvme_ctrlr	*ctrlr;
 	struct ctrlr_entry	*next;
     char			name[1024];
 };
 
+/*
+ *
+ */
 struct ns_entry {
 	struct spdk_nvme_ctrlr	*ctrlr;
 	struct spdk_nvme_ns	*ns;
 	struct ns_entry		*next;
 	struct spdk_nvme_qpair	*qpair;
 };
+
+/*
+ * function parameters in spdk interface functions.
+ */
+struct spdk_sequence {
+	struct ns_entry	*ns_entry;
+    char            *buf;    
+	char		    *buf_user;
+    int             buf_size;
+	int		        is_completed;
+};
+
 
 static struct ctrlr_entry *g_controllers = NULL;
 static struct ns_entry *g_namespaces = NULL;
@@ -183,16 +201,16 @@ int spdk_init(void){
 	if (rc != 0) {
 		fprintf(stderr, "spdk_nvme_probe() failed\n");
 		cleanup();
-		return TXDRIVER_FAIL;
+		return TXD_FAIL;
 	}
 
 	if (g_controllers == NULL) {
 		fprintf(stderr, "no NVMe controllers found\n");
 		cleanup();
-		return TXDRIVER_FAIL;
+		return TXD_FAIL;
 	}
 
-    return TXDRIVER_SUCCESS;
+    return TXD_SUCCESS;
 }
 
 int spdk_alloc_qpair(void){
@@ -203,9 +221,9 @@ int spdk_alloc_qpair(void){
     ns_entry->qpair = spdk_nvme_ctrlr_alloc_io_qpair(ns_entry->ctrlr, 0);
     if(ns_entry->qpair == NULL){
         printf("ERROR: apdk_nvme_ctrlr_alloc_io_qpair failed\n");
-        return TXDRIVER_FAIL;
+        return TXD_FAIL;
     }
-    return TXDRIVER_SUCCESS;
+    return TXD_SUCCESS;
 }
 
 int spdk_write(TXD_PARAMS *params){ 
@@ -233,7 +251,7 @@ int spdk_write(TXD_PARAMS *params){
             params->lba_count /* LBA Count */,
             write_complete, &sequence, 0);
 
-    if(rc != TXDRIVER_SUCCESS){
+    if(rc != TXD_SUCCESS){
         fprintf(stderr, "starting write io failed\n");
         exit(1);
     }
@@ -242,7 +260,7 @@ int spdk_write(TXD_PARAMS *params){
     while(!sequence.is_completed){
         spdk_nvme_qpair_process_completions(ns_entry->qpair, 0);
     }  
-    return TXDRIVER_SUCCESS;
+    return TXD_SUCCESS;
 } 
 
 int spdk_read(TXD_PARAMS *params){
@@ -265,7 +283,7 @@ int spdk_read(TXD_PARAMS *params){
             params->lba_count /* LBA Count */,
             read_complete, &sequence, 0);
 
-    if(rc != TXDRIVER_SUCCESS){
+    if(rc != TXD_SUCCESS){
         fprintf(stderr, "starting write io failed\n");
         exit(1);
     }
@@ -274,7 +292,7 @@ int spdk_read(TXD_PARAMS *params){
     while(!sequence.is_completed){
         spdk_nvme_qpair_process_completions(ns_entry->qpair, 0);
     } 
-    return TXDRIVER_SUCCESS;
+    return TXD_SUCCESS;
 }
 
 int spdk_free(void){
@@ -287,7 +305,7 @@ int spdk_free(void){
 
 int main(int argc, char **argv)
 {
-    int res = TXDRIVER_FAIL;
+    int res = TXD_FAIL;
     char *tmp_str = "Son Ju Hyung\n";
 
     TXD_PARAMS params_w;
@@ -300,13 +318,13 @@ int main(int argc, char **argv)
     memcpy(params_w.buf, tmp_str, strlen(tmp_str));
 
     res = spdk_init(); 
-    TXD_FAIL(res);
+    TXD_CHK_FAIL(res);
 
     res = spdk_alloc_qpair(); 
-    TXD_FAIL(res);
+    TXD_CHK_FAIL(res);
 
     res = spdk_write(&params_w); 
-    TXD_FAIL(res);
+    TXD_CHK_FAIL(res);
 
     TXD_PARAMS params_r;
     params_r.buf = (char*)calloc(0x1000, 1);
@@ -316,11 +334,11 @@ int main(int argc, char **argv)
     params_r.lba_count = 1;
 
     res = spdk_read(&params_r);
-    TXD_FAIL(res);
+    TXD_CHK_FAIL(res);
     printf("%s\n", params_r.buf);
 
     spdk_free();
 
-    return TXDRIVER_SUCCESS;
+    return TXD_SUCCESS;
 } 
 
