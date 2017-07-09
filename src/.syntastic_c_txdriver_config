@@ -1,0 +1,4 @@
+-I/home/son/SKT/dpdk/dpdk-stable-17.05.1/build/include/ 
+-I/home/son/SKT/spdk/include/ 
+-I/home/son/SKT/spdk/config.h 
+-I/home/son/SKT/TxDriver/include/

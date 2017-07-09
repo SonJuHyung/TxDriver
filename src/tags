@@ -1,0 +1,33 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+attach_cb	txdriver_spdk.c	/^attach_cb(void *cb_ctx, const struct spdk_nvme_transport_id *trid,$/;"	f	file:
+buf	txdriver_spdk.c	/^	char		*buf;$/;"	m	struct:spdk_sequence	file:
+cleanup	txdriver_spdk.c	/^cleanup(void)$/;"	f	file:
+ctrlr	txdriver_spdk.c	/^	struct spdk_nvme_ctrlr	*ctrlr;$/;"	m	struct:ctrlr_entry	typeref:struct:ctrlr_entry::spdk_nvme_ctrlr	file:
+ctrlr	txdriver_spdk.c	/^	struct spdk_nvme_ctrlr	*ctrlr;$/;"	m	struct:ns_entry	typeref:struct:ns_entry::spdk_nvme_ctrlr	file:
+ctrlr_entry	txdriver_spdk.c	/^struct ctrlr_entry {$/;"	s	file:
+g_controllers	txdriver_spdk.c	/^static struct ctrlr_entry *g_controllers = NULL;$/;"	v	typeref:struct:ctrlr_entry	file:
+g_namespaces	txdriver_spdk.c	/^static struct ns_entry *g_namespaces = NULL;$/;"	v	typeref:struct:ns_entry	file:
+is_completed	txdriver_spdk.c	/^	int		is_completed;$/;"	m	struct:spdk_sequence	file:
+main	txdriver_spdk.c	/^int main(int argc, char **argv)$/;"	f
+name	txdriver_spdk.c	/^	char			name[1024];$/;"	m	struct:ctrlr_entry	file:
+next	txdriver_spdk.c	/^	struct ctrlr_entry	*next;$/;"	m	struct:ctrlr_entry	typeref:struct:ctrlr_entry::ctrlr_entry	file:
+next	txdriver_spdk.c	/^	struct ns_entry		*next;$/;"	m	struct:ns_entry	typeref:struct:ns_entry::ns_entry	file:
+ns	txdriver_spdk.c	/^	struct spdk_nvme_ns	*ns;$/;"	m	struct:ns_entry	typeref:struct:ns_entry::spdk_nvme_ns	file:
+ns_entry	txdriver_spdk.c	/^	struct ns_entry	*ns_entry;$/;"	m	struct:spdk_sequence	typeref:struct:spdk_sequence::ns_entry	file:
+ns_entry	txdriver_spdk.c	/^struct ns_entry {$/;"	s	file:
+probe_cb	txdriver_spdk.c	/^probe_cb(void *cb_ctx, const struct spdk_nvme_transport_id *trid,$/;"	f	file:
+qpair	txdriver_spdk.c	/^	struct spdk_nvme_qpair	*qpair;$/;"	m	struct:ns_entry	typeref:struct:ns_entry::spdk_nvme_qpair	file:
+read_complete	txdriver_spdk.c	/^read_complete(void *arg, const struct spdk_nvme_cpl *completion)$/;"	f	file:
+register_ns	txdriver_spdk.c	/^register_ns(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_ns *ns)$/;"	f	file:
+spdk_alloc	txdriver_spdk.c	/^int spdk_alloc(void){$/;"	f
+spdk_free	txdriver_spdk.c	/^int spdk_free(void){$/;"	f
+spdk_init	txdriver_spdk.c	/^int spdk_init(void){ $/;"	f
+spdk_read	txdriver_spdk.c	/^int spdk_read(void){$/;"	f
+spdk_sequence	txdriver_spdk.c	/^struct spdk_sequence {$/;"	s	file:
+spdk_write	txdriver_spdk.c	/^int spdk_write(void){ $/;"	f
+write_complete	txdriver_spdk.c	/^write_complete(void *arg, const struct spdk_nvme_cpl *completion)$/;"	f	file:
