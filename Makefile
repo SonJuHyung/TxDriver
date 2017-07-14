@@ -14,7 +14,7 @@ TXD_CUR=$(CURDIR)
 TXD_SRC=$(TXD_CUR)/src
 TXD_BIN=$(TXD_CUR)/bin
 
-# NVDRIVER headers
+# TXDRIVER headers
 INC = ${CURDIR}/include/
 
 # spdk, dpdk path 
@@ -36,10 +36,11 @@ LDFLAGS = -L $(SPDK_LIBS_DIR) $(SPDK_LIBS) -L $(DPDK_LIBS_DIR) $(DPDK_LIBS) \
 		  $(WARNING) -pthread -laio -lrt -ldl 
 
 # source
-OBJS_NVDRIVER = $(TXD_SRC)/txdriver_spdk.o $(TXD_SRC)/txdriver_api.o
-SRCS_NVDRIVER = $(TXD_SRC)/$(OBJS_NVDRIVER:.o=.c)
+OBJS_TXDRIVER = $(TXD_SRC)/txdriver_spdk.o $(TXD_SRC)/txdriver_api.o
+SRCS_TXDRIVER = $(TXD_SRC)/$(OBJS_TXDRIVER:.o=.c)
 
-TARGET_NVDRIVER = $(TXD_BIN)/modifying
+TARGET_TXDRIVER = $(TXD_BIN)/modifying
+LIB_TXDRIVER = $(TXD_BIN)/txdriver.a
 
 #.PHONY: all $(DIRS-y) clean 
 
@@ -47,20 +48,23 @@ TARGET_NVDRIVER = $(TXD_BIN)/modifying
 	@echo "Compilingi NV Transaction Driver $< ..."
 	@$(CC) $(DEBUG) $(CFLAGS) -c $< -o $@
 
-all: $(TARGET_NVDRIVER)
+all: $(TARGET_TXDRIVER) $(LIB_TXDRIVER)
 
-$(TARGET_NVDRIVER) : $(OBJS_NVDRIVER)
+$(TARGET_TXDRIVER) : $(OBJS_TXDRIVER)
 	@echo "Start building..."
-	@$(CC) -o $(TARGET_NVDRIVER) $(OBJS_NVDRIVER) $(LDFLAGS)
+	@$(CC) -o $(TARGET_TXDRIVER) $(OBJS_TXDRIVER) $(LDFLAGS)
 	@echo "Build done."
 
+$(LIB_TXDRIVER) : $(OBJS_TXDRIVER)
+	$(AR) rcv $@ $(OBJS_TXDRIVER)
+
 dep : 
-	gccmaedep $(INC) $(SRCS_NVDRIVER)
+	gccmaedep $(INC) $(SRCS_TXDRIVER)
 
 clean:
-	@echo "Cleaning TARGET_NVDRIVERs..."
+	@echo "Cleaning TARGET_TXDRIVERs..."
 	@rm -rf $(TXD_SRC)/*.o
-	@rm -rf $(TXD_BIN/)$(TARGET_NVDRIVER)
+	@rm -rf $(TXD_BIN)/$(TARGET_TXDRIVER) $(TXD_BIN)/$(LIB_TXDRIVER)
 	@echo "Cleaned." 
 
 

@@ -13,15 +13,15 @@
  * Descriptor block types:
  */
 #define TXD_DESCRIPTOR_BLOCK	1
-#define TXD_COMMIT_BLOCK	2
-#define TXD_SUPERBLOCK_V1	3
-#define TXD_SUPERBLOCK_V2	4
-#define TXD_REVOKE_BLOCK	5
+#define TXD_COMMIT_BLOCK	    2
+#define TXD_SUPERBLOCK_V1	    3
+#define TXD_REVOKE_BLOCK	    4
+#define TXD_TYPE_BLOCK          5
 
 /*
  * Standard header for all descriptor blocks:
  */
-typedef struct txd_j_header_s
+typedef struct txd_journal_header_s
 {
 	uint32_t		txd_blocktype;
     uint32_t		txd_t_id;
@@ -30,7 +30,7 @@ typedef struct txd_j_header_s
 /*
  * Commit block header for storing transactional checksums:
  */
-struct commit_header {
+struct txd_journal_commit_header_s {
 	uint32_t		    txd_magic;
 	uint32_t            txd_blocktype;
 	uint32_t            txd_sequence;
@@ -42,12 +42,12 @@ struct commit_header {
 #endif
 	uint64_t		        h_commit_sec;
 	uint32_t		    h_commit_nsec;
-};
+} txd_j_commit_header_t;
 
 /*
  * The journal superblock.
  */
-typedef struct txd_j_superblock_s
+typedef struct txd_journal_superblock_s
 {
 	txd_j_header_t s_header;
 
@@ -88,16 +88,16 @@ typedef struct txd_j_superblock_s
 /*
  * The block tag: used to describe a single buffer in the journal.
  */
-typedef struct txd_j_block_tag_s
+typedef struct txd_journal_block_tag_s
 {
 	uint32_t		t_blocknr;	/* The on-disk block number */
 	uint16_t		t_checksum;	/* truncated crc32c(uuid+seq+block) */
 	uint16_t		t_flags;	/* See below */
-} txd_j_block_tag_t;
+} txd_journal_block_tag_t;
 
 /* Tail of descriptor or revoke block, for checksumming */
-struct txd_j_block_tail {
+struct txd_journal_block_tail_s {
 	uint32_t		t_checksum;	/* crc32c(uuid+descr_block) */
-};
+} txd_journal_block_tail_t;
 
 #endif
