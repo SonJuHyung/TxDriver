@@ -1,7 +1,8 @@
-#include "poison.h"
-
 #ifndef _LINUX_LIST_H
 #define _LINUX_LIST_H
+
+#include "poison.h"
+#include "ondisk.h"
 
 
 struct list_head {

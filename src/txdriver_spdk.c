@@ -86,7 +86,6 @@ read_complete(void *arg, const struct spdk_nvme_cpl *completion)
 { 
 	struct spdk_sequence *sequence = arg;
 
-	printf("%s", sequence->buf);
     memcpy(sequence->buf_user, sequence->buf, sequence->buf_size);
 	spdk_dma_free(sequence->buf);
 	sequence->is_completed = 1;
@@ -152,8 +151,7 @@ attach_cb(void *cb_ctx, const struct spdk_nvme_transport_id *trid,
 	}
 }
 
-static void
-cleanup(void)
+void cleanup(void)
 {
 	struct ns_entry *ns_entry = g_namespaces;
 	struct ctrlr_entry *ctrlr_entry = g_controllers;
@@ -229,10 +227,10 @@ int spdk_alloc_qpair(void){
 int spdk_write(TXD_PARAMS *params){ 
 	struct ns_entry *ns_entry;
 	struct spdk_sequence sequence;
-	int rc;
+	int rc = TXD_FAIL;
 
-    CHK_PARAMS(params);
-	ns_entry = g_namespaces;
+    assert(params != NULL);
+    ns_entry = g_namespaces;
 
     //allocate memory and pin it
     sequence.buf = spdk_dma_zmalloc(params->buf_size, params->buf_align, NULL);   
@@ -245,6 +243,15 @@ int spdk_write(TXD_PARAMS *params){
 
     /* write to lba 0, "write_complete" and "&sequence" are the completion
      * callback and argument.
+     *
+     * INFO
+     * lba : 512B unit. 
+     * ns : NVMe namespace to submit the write I/O
+     * qpair : I/O queue pair
+     * buf : virtual address of data payload
+     * write_complete : callback function to invoke when the I/O is submitted
+     * sequence : augument of callback function
+     * sequence : flags
      */
     rc = spdk_nvme_ns_cmd_write(ns_entry->ns, ns_entry->qpair, sequence.buf,
             params->lba /* LBA */, 
@@ -266,9 +273,9 @@ int spdk_write(TXD_PARAMS *params){
 int spdk_read(TXD_PARAMS *params){
 	struct ns_entry *ns_entry;
 	struct spdk_sequence sequence;
-	int rc;
+	int rc = TXD_FAIL;
 
-    CHK_PARAMS(params);
+    assert(params != NULL);
 	ns_entry = g_namespaces;
 
     //allocate memory and pin it
@@ -299,46 +306,7 @@ int spdk_free(void){
     struct ns_entry *ns_entry = g_namespaces;
 
     //free qpair
-    return spdk_nvme_ctrlr_free_io_qpair(ns_entry->qpair);
+    return spdk_nvme_ctrlr_free_io_qpair(ns_entry->qpair);    
 } 
 
-
-int main(int argc, char **argv)
-{
-    int res = TXD_FAIL;
-    char *tmp_str = "Son Ju Hyung\n";
-
-    TXD_PARAMS params_w;
-    params_w.buf = (char*)calloc(0x1000, 1);
-    params_w.buf_size = 0x1000;
-    params_w.buf_align = 0x1000;
-    params_w.lba = 0;
-    params_w.lba_count = 1;
-
-    memcpy(params_w.buf, tmp_str, strlen(tmp_str));
-
-    res = spdk_init(); 
-    TXD_CHK_FAIL(res);
-
-    res = spdk_alloc_qpair(); 
-    TXD_CHK_FAIL(res);
-
-    res = spdk_write(&params_w); 
-    TXD_CHK_FAIL(res);
-
-    TXD_PARAMS params_r;
-    params_r.buf = (char*)calloc(0x1000, 1);
-    params_r.buf_size = 0x1000;
-    params_r.buf_align = 0x1000;
-    params_r.lba = 0;
-    params_r.lba_count = 1;
-
-    res = spdk_read(&params_r);
-    TXD_CHK_FAIL(res);
-    printf("%s\n", params_r.buf);
-
-    spdk_free();
-
-    return TXD_SUCCESS;
-} 
 

@@ -6,6 +6,7 @@ DEBUG = -g3
 #optimization level
 OPTIMIZATION = -O0 
 # warnning message
+#WARNING = -w
 WARNING = -Wall
 #-Wall
 
@@ -18,8 +19,8 @@ TXD_BIN=$(TXD_CUR)/bin
 INC = ${CURDIR}/include/
 
 # spdk, dpdk path 
-SPDK_ROOT_DIR = /home/son/SKT/spdk
-DPDK_DIR = /home/son/SKT/dpdk/dpdk-stable-17.05.1
+SPDK_ROOT_DIR = /home/son/git/SKT/spdk
+DPDK_DIR = /home/son/git/SKT/dpdk/dpdk-stable-17.05.1
 
 # spdk library path, name
 SPDK_LIBS_DIR = $(SPDK_ROOT_DIR)/build/lib
@@ -31,13 +32,16 @@ DPDK_LIBS = -lrte_eal -lrte_mempool -lrte_ring
 
 # flags
 CFLAGS = -I $(DPDK_DIR)/build/include -I $(SPDK_ROOT_DIR)/include -I $(SPDK_ROOT_DIR) -I $(INC)\
-		 $(WARNING) $(DEBUG) $(OPTIMIZATION) -pthread -D_GNU_SOURCE 
+		 $(WARNING) $(DEBUG) $(OPTIMIZATION) -pthread -D_GNU_SOURCE -fms-extensions
 LDFLAGS = -L $(SPDK_LIBS_DIR) $(SPDK_LIBS) -L $(DPDK_LIBS_DIR) $(DPDK_LIBS) \
 		  $(WARNING) -pthread -laio -lrt -ldl 
 
 # source
-OBJS_TXDRIVER = $(TXD_SRC)/txdriver_spdk.o $(TXD_SRC)/txdriver_api.o
-SRCS_TXDRIVER = $(TXD_SRC)/$(OBJS_TXDRIVER:.o=.c)
+#OBJS_TXDRIVER = $(TXD_SRC)/txdriver_spdk.o $(TXD_SRC)/txdriver_api.o
+#SRCS_TXDRIVER = $(TXD_SRC)/$(OBJS_TXDRIVER:.o=.c) 
+SRCS_TXDRIVER = $(wildcard $(TXD_SRC)/*.c)
+OBJS_TXDRIVER = $(SRCS_TXDRIVER:.c=.o)
+
 
 TARGET_TXDRIVER = $(TXD_BIN)/modifying
 LIB_TXDRIVER = $(TXD_BIN)/txdriver.a
@@ -45,18 +49,19 @@ LIB_TXDRIVER = $(TXD_BIN)/txdriver.a
 #.PHONY: all $(DIRS-y) clean 
 
 .c.o:
-	@echo "Compilingi NV Transaction Driver $< ..."
+	@echo "Compiling NV Transaction Driver $< ..."
 	@$(CC) $(DEBUG) $(CFLAGS) -c $< -o $@
 
-all: $(TARGET_TXDRIVER) $(LIB_TXDRIVER)
-
 $(TARGET_TXDRIVER) : $(OBJS_TXDRIVER)
-	@echo "Start building..."
+	@echo "Start Linking..."
 	@$(CC) -o $(TARGET_TXDRIVER) $(OBJS_TXDRIVER) $(LDFLAGS)
 	@echo "Build done."
 
 $(LIB_TXDRIVER) : $(OBJS_TXDRIVER)
+	@echo "Making library..."
 	$(AR) rcv $@ $(OBJS_TXDRIVER)
+
+all: $(TARGET_TXDRIVER) $(LIB_TXDRIVER)
 
 dep : 
 	gccmaedep $(INC) $(SRCS_TXDRIVER)
@@ -64,7 +69,7 @@ dep :
 clean:
 	@echo "Cleaning TARGET_TXDRIVERs..."
 	@rm -rf $(TXD_SRC)/*.o
-	@rm -rf $(TXD_BIN)/$(TARGET_TXDRIVER) $(TXD_BIN)/$(LIB_TXDRIVER)
+	@rm -rf $(TXD_BIN)/*
 	@echo "Cleaned." 
 
 
