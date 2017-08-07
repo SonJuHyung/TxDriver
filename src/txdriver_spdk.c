@@ -53,7 +53,7 @@ register_ns(struct spdk_nvme_ctrlr *ctrlr, struct spdk_nvme_ns *ns)
 	 * spdk_nvme_ctrlr is the logical abstraction in SPDK for an NVMe
 	 *  controller.  During initialization, the IDENTIFY data for the
 	 *  controller is read using an NVMe admin command, and that data
-	 *  can be retrieved using spdk_nvme_ctrlr_get_data() to get
+	 *  can be errrieved using spdk_nvme_ctrlr_get_data() to get
 	 *  detailed information on the controller.  Refer to the NVMe
 	 *  specification for more details on IDENTIFY for NVMe controllers.
 	 */

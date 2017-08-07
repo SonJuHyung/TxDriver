@@ -10,13 +10,13 @@ int tx_format(uint64_t txd_addr, uint32_t txd_size)
 {    
     TXD_PARAMS params;
     txd_j_superblock_t *j_sb = NULL;
-    int ret = TXD_FAIL;
+    int err = TXD_FAIL;
 
-    ret = spdk_init(); 
-    TXD_CHK_FAIL(ret);
+    err = spdk_init(); 
+    TXD_CHK_FAIL(err);
    
-    ret = spdk_alloc_qpair(); 
-    TXD_CHK_FAIL(ret);
+    err = spdk_alloc_qpair(); 
+    TXD_CHK_FAIL(err);
 
     /*
      * initialize superblock which will be written on disk. 
@@ -37,21 +37,21 @@ int tx_format(uint64_t txd_addr, uint32_t txd_size)
     params.lba = txd_addr/LBA_UNIT;
     params.lba_count = txd_size/LBA_UNIT;
 
-    ret = do_format(&params);
-    return ret; 
+    err = do_format(&params);
+    return err; 
 }
 
 int tx_begin(uint64_t txd_addr, uint32_t txd_size)
 {
     txd_j_superblock_t *j_sb = NULL;
     TXD_PARAMS params;
-    int ret = TXD_FAIL;
+    int err = TXD_FAIL;
 
-//    ret = spdk_init(); 
-//    TXD_CHK_FAIL(ret);
+//    err = spdk_init(); 
+//    TXD_CHK_FAIL(err);
    
-    ret = spdk_alloc_qpair(); 
-    TXD_CHK_FAIL(ret);
+    err = spdk_alloc_qpair(); 
+    TXD_CHK_FAIL(err);
 
     /*
      * get super block from disk.
@@ -62,8 +62,8 @@ int tx_begin(uint64_t txd_addr, uint32_t txd_size)
     params.lba = txd_addr;
     params.lba_count = 1;    
 
-    ret = spdk_read(&params);
-    assert(ret != TXD_FAIL);
+    err = spdk_read(&params);
+    assert(err != TXD_FAIL);
   
     j_sb = (txd_j_superblock_t*)params.buf;
 
@@ -74,11 +74,17 @@ int tx_begin(uint64_t txd_addr, uint32_t txd_size)
     else
         printf("\n###  There is no txd journal super block ###\n");
 
-    ret = spdk_free(); 
-    assert(ret != TXD_FAIL);
+    /* 
+     * now I can start journaling mechanism
+     * first I need to allocate txd_journal_t structure.
+     */
+
+    /* freeing  */
+    err = spdk_free(); 
+    assert(err != TXD_FAIL);
     cleanup();
 
-   return ret; 
+   return err; 
 }
 
 int tx_write(uint8_t meta_buffer, uint8_t data_buffer)

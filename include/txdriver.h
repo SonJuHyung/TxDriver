@@ -6,6 +6,9 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <string.h>
+#include <errno.h>
+//#include <sys/type.h>
+
 #include "list.h"
 #include "ondisk.h"
 #include "types.h"
@@ -82,16 +85,16 @@ struct txd_buffer_head{
 };
 
 
-#define jbd2_unmount	0x001	/* journal thread is being destroyed */
-#define jbd2_abort	0x002	/* journaling has been aborted for errors. */
-#define jbd2_ack_err	0x004	/* the errno in the sb has been acked */
-#define jbd2_flushed	0x008	/* the journal superblock has been flushed */
-#define jbd2_loaded	0x010	/* the journal superblock has been loaded */
-#define jbd2_barrier	0x020	/* use ide barriers */
-#define jbd2_abort_on_syncdata_err	0x040	/* abort the journal on file
+#define TXD_UNMOUNT	0x001	/* journal thread is being destroyed */
+#define TXD_ABORT	0x002	/* journaling has been aborted for errors. */
+#define TXD_ACK_ERR	0x004	/* the errno in the sb has been acked */
+#define TXD_FLUSHED	0x008	/* the journal superblock has been flushed */
+#define TXD_LOADED	0x010	/* the journal superblock has been loaded */
+#define TXD_BARRIER	0x020	/* use ide barriers */
+#define TXD_ABORT_ON_SYNCDATA_ERR	0x040	/* abort the journal on file
                                              * data write error in ordered
                                              * mode */
-#define JBD2_REC_ERR	0x080	/* The errno in the sb has been recorded */
+#define TXD_REC_ERR	0x080	/* The errno in the sb has been recorded */
 
 typedef struct txd_transaction_s txd_transaction_t;
 typedef struct txd_journal_s txd_journal_t;
@@ -125,7 +128,7 @@ typedef struct txd_revoke_record_s
 
 
 /* The revoke table is just a simple hash table of revoke records. */
-struct txd_revoke_table_s
+typedef struct txd_revoke_table_s
 {
     /* It is conceivable that we might want a larger hash table
      * for recovery.  Must be a power of two. */
@@ -425,18 +428,18 @@ struct txd_transaction_s
      * [t_handle_lock]
      * 
      * NOTE     
-     *  chnaage atomic_t to volatile int.
+     *  chnaage atomic_t to int.
      */    
-    volatile int 		t_updates;
+    int 		t_updates;
 
     /*
      * Number of buffers reserved for use by all handles in this transaction
      * handle but not yet modified. [t_handle_lock]
      *
      * NOTE
-     *  change atomic_t to volatile int
+     *  change atomic_t to int
      */
-    volatile int		t_outstanding_credits;
+    int		t_outstanding_credits;
 
     /*
      * Forward and backward links for the circular list of all transactions
@@ -464,7 +467,7 @@ struct txd_transaction_s
      * NOTE
      *  atomic_t to volatime int
      */
-    volatile int		t_handle_count;
+    int		t_handle_count;
 
     /*
      * This transaction is being forced and some process is
@@ -486,13 +489,19 @@ struct txd_transaction_s
 #define TXD_NR_BATCH	64
 #define BDEVNAME_SIZE 32
 
+
+typedef struct wait_queue_s{
+    pthread_mutex_t     wq_mtx;
+    pthread_cond_t      wq_cnd;
+} wait_queue_t;
+
 /**
  * struct txd_journal_info - journal information.
  */
 struct txd_journal_s
 {
     /* General journaling state flags [j_state_lock] */
-    unsigned long		        j_flags;
+    unsigned long		        j_flags;                                    // x...o
 
     /*
      * Is there an outstanding uncleared error on the journal (from a prior
@@ -501,13 +510,13 @@ struct txd_journal_s
     int			                j_errno;
 
     /* The superblock buffer */
-    struct txd_buffer_head	*j_sb_buffer;
-    txd_j_superblock_t	        *j_superblock;
+    struct txd_buffer_head	*j_sb_buffer;                                   // o
+    txd_j_superblock_t	        *j_superblock;                              // o
 
     /*
      * Protect the various scalars in the journal
      */
-    pthread_rwlock_t		    j_state_lock;
+    pthread_rwlock_t		    j_state_lock;                               // o
 
     /*
      * Number of processes waiting to create a barrier lock [j_state_lock]
@@ -515,7 +524,7 @@ struct txd_journal_s
     int			                j_barrier_count;
 
     /* The barrier lock itself */
-    pthread_mutex_t             j_barrier;
+     pthread_mutex_t             j_barrier;                                 // o
 
     /*
      * Transactions: The current running transaction...
@@ -535,31 +544,29 @@ struct txd_journal_s
      */
     txd_transaction_t		    *j_checkpoint_transactions;
 
-    /*
-     * TODO
-     *  need to find data structure to replace wait_queue_head_t
-     */
-#if NEED_TO_FIND
+
     /*
      * Wait queue for waiting for a locked transaction to start committing,
-     * or for a barrier lock to be released
+     * or for a barrier lock to be released 
+     *
+     * wait queue in kernel space is similar to condition variable in user space.
      */
-    wait_queue_head_t	        j_wait_transaction_locked;
+    wait_queue_t	        j_wait_transaction_locked;                      // o
 
     /* Wait queue for waiting for commit to complete */
-    wait_queue_head_t	        j_wait_done_commit;
+    wait_queue_t	        j_wait_done_commit;                             // o
 
     /* Wait queue to trigger commit */
-    wait_queue_head_t	        j_wait_commit;
+    wait_queue_t	        j_wait_commit;                                  // o
 
     /* Wait queue to wait for updates to complete */
-    wait_queue_head_t	        j_wait_updates;
+    wait_queue_t	        j_wait_updates;                                 // o
 
     /* Wait queue to wait for reserved buffer credits to drop */
-    wait_queue_head_t	        j_wait_reserved;
-#endif
+    wait_queue_t	        j_wait_reserved;                                // o
+
     /* Semaphore for locking against concurrent checkpoints */
-    pthread_mutex_t		        j_checkpoint_mutex;
+    pthread_mutex_t		        j_checkpoint_mutex;                         // o
 
     /*
      * List of buffer heads used by the checkpoint routine.  
@@ -600,20 +607,20 @@ struct txd_journal_s
      * store the journal.
      * XXX
      */
-    int			                j_blocksize;
-    unsigned long long	        j_blk_offset;
-    char			            j_devname[BDEVNAME_SIZE];
+    int			                j_blocksize;                                // o
+    unsigned long long	        j_blk_offset;                               // o
+//    char			            j_devname[BDEVNAME_SIZE];
 
     /* Total maximum capacity of the journal region on disk. */
-    unsigned int		        j_maxlen;
+    unsigned int		        j_maxlen;                                   // o
 
     /* Number of buffers reserved from the running transaction 
      * FIXME
      * should I have to implement simple atomic increment function in inline assembly?
      * NOTE
-     * change atomic_t to volatile int
+     * change atomic_t to int
      */
-    volatile int		                    j_reserved_credits;
+    int		                    j_reserved_credits;                        // o
 
     /*
      * Protects the buffer lists and internal buffer state.
@@ -657,7 +664,7 @@ struct txd_journal_s
      * NOTE
      * may be 5 seconds
      */
-    unsigned long		        j_commit_interval;
+    unsigned long		        j_commit_interval;                          // o
 
     /* The timer used to wakeup the commit thread: 
      *
@@ -670,18 +677,18 @@ struct txd_journal_s
      * The revoke table: maintains the list of revoked blocks in the
      * current transaction.  [j_revoke_lock]
      */
-    pthread_spinlock_t		    j_revoke_lock;
-    struct jbd2_revoke_table_s  *j_revoke;
-    struct jbd2_revoke_table_s  *j_revoke_table[2];
+    pthread_spinlock_t		    j_revoke_lock;                              // o
+    struct txd_revoke_table_s  *j_revoke;                                   // o
+    struct txd_revoke_table_s  *j_revoke_table[2];                          // o
 
     /*
      * array of bhs for jbd2_journal_commit_transaction
      */
-    struct txd_buffer_head    **j_wbuf;
+    struct txd_buffer_head    **j_wbuf;                                     // o
     /*
      *	journal->j_blocksize / sizeof(txd_block_tag_t);
      */
-    int			                j_wbufsize;
+    int			                j_wbufsize;                                 // o
 
     /*
      * this is the pid of hte last person to run a synchronous operation
@@ -705,8 +712,8 @@ struct txd_journal_s
      *  min - 0
      *  max - 15000 (15 ms)
      */
-    u32			                j_min_batch_time;
-    u32			                j_max_batch_time;
+    u32			                j_min_batch_time;                           // o
+    u32			                j_max_batch_time;                           // o
 
     /* This function is called when a transaction is closed 
      * NOTE
@@ -814,6 +821,28 @@ void print_sb_info(txd_j_superblock_t *sb);
 int chk_txd_sb(txd_j_superblock_t *sb, uint32_t txd_size);
 void init_journal_header(txd_j_header_t *txd_j_header,txd_type_t blk_type,int tid );
 int do_format(TXD_PARAMS *params);
+txd_journal_t *journal_init_common(unsigned long long start, int len, int blocksize);
+
+/* atomic.c */  
+void atomic_add( int * value, int inc_val);
+void atomic_sub( int * value, int dec_val);
+void atomic_inc( int * value);
+void atomic_dec( int * value);
+int atomic_dec_and_test( int * value);
+int atomic_inc_and_test( int * value);
+int test_and_set(int *lock);
+int atomic_xchg(volatile unsigned int *addr, unsigned int newval);
+
+/* revoke.c */
+#define JOURNAL_REVOKE_DEFAULT_HASH 256
+int txd_journal_init_revoke(txd_journal_t *journal, int hash_size);
+void txd_journal_destroy_revoke(txd_journal_t *journal_t);
+
+/*
+ * FIXME 
+ * need to implement
+ */
+#define atomic_set(addr, newval)   atomic_xchg(addr, newval)
 
 
 #endif
