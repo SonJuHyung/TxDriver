@@ -3,8 +3,9 @@
 
 /*
  * INFO
- * @txd_addr : journal start address.( B unit )
- * @txd_size : journal area size. ( B unit )
+ * format journal super block to txd_addr in NVMe through spdk.
+ *  @txd_addr : journal start address.( B unit )
+ *  @txd_size : journal area size. ( B unit )
  */
 int tx_format(uint64_t txd_addr, uint32_t txd_size)
 {    
@@ -38,20 +39,32 @@ int tx_format(uint64_t txd_addr, uint32_t txd_size)
     params.lba_count = txd_size/LBA_UNIT;
 
     err = do_format(&params);
+    if(err != TXD_FAIL)
+        printf("\n### Journal super block formatted ! ###\n\n");
+
+#if 0
+    err = spdk_free();
+    assert(err != TXD_FAIL);
+    cleanup();
+#endif
+
     return err; 
 }
 
-int tx_begin(uint64_t txd_addr, uint32_t txd_size)
+txd_journal_t* tx_begin(uint64_t txd_addr, uint32_t txd_size)
 {
     txd_j_superblock_t *j_sb = NULL;
+    txd_journal_t *journal = NULL;
     TXD_PARAMS params;
     int err = TXD_FAIL;
 
-//    err = spdk_init(); 
-//    TXD_CHK_FAIL(err);
+#if 0
+    err = spdk_init(); 
+    TXD_CHK_FAIL(err);
    
     err = spdk_alloc_qpair(); 
     TXD_CHK_FAIL(err);
+#endif
 
     /*
      * get super block from disk.
@@ -68,23 +81,54 @@ int tx_begin(uint64_t txd_addr, uint32_t txd_size)
     j_sb = (txd_j_superblock_t*)params.buf;
 
     if(!chk_txd_sb(j_sb, txd_size)){
-        printf("\n### Journal super block detected ! ###\n");
+        printf("\n### Journal super block detected ! ###\n\n");
         print_sb_info(j_sb);
+
+        /* now I need to create txd_journal_t to manage journal information.*/       
+        journal = txd_get_journal(j_sb);
+        if(journal == NULL){
+            perror("Can't allocate txd_journal_t ");
+            goto out;
+        }
+
+        /*
+         * TODO
+         *  need to implement this function below.
+         *       - txd_journal_needs_recovery()
+         *       - txd_wipe_journal_log()
+         */
+        if(!txd_journal_need_recovery(journal))
+            err = txd_wipe_journal_log(journal);
+
+        if(!err)
+            err = txd_journal_load(journal);        
+
+        if(err){
+            perror("Can't load journal ");
+            txd_journal_destroy(journal);
+            goto out;
+        }
+        
     }
-    else
-        printf("\n###  There is no txd journal super block ###\n");
+    else{
+        printf("\n###  There is no txd journal super block ###\n\n");
+        goto out;
+    }
 
     /* 
      * now I can start journaling mechanism
      * first I need to allocate txd_journal_t structure.
      */
 
+    return journal;
+out:
     /* freeing  */
     err = spdk_free(); 
-    assert(err != TXD_FAIL);
+    journal = NULL;
+    assert(err != TXD_FAIL);    
     cleanup();
 
-   return err; 
+   return journal; 
 }
 
 int tx_write(uint8_t meta_buffer, uint8_t data_buffer)

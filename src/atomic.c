@@ -112,9 +112,7 @@ int test_and_set(int *lock)
 
 }
 
-#define atomic_set(addr, newvalv)   atomic_xchg(addr, newval)
-
-int atomic_xchg(volatile unsigned int *addr, unsigned int newval)
+int atomic_xchg(int *addr, int newval)
 {   
    int result;
 
@@ -126,4 +124,3 @@ int atomic_xchg(volatile unsigned int *addr, unsigned int newval)
            : "cc");
    return result;  
 }
-

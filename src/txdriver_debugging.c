@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     puts("");
 
     tx_format(0, 512);
-//    tx_begin(0, 10);
+    tx_begin(0, 512);
 
     return 0;
 } 

@@ -18,8 +18,10 @@
 #define DEBUG 1
 
 // Macro variable
-#define TXD_SUCCESS    0
-#define TXD_FAIL       1
+#define TXD_SUCCESS     0
+#define TXD_FAIL        1
+#define TXD_TRUE        1
+#define TXD_FALSE       0
 
 
 //  Macro functions and structures
@@ -74,14 +76,14 @@ struct txd_spdk_params{
  *  - should I use rbtree or list
  */
 struct txd_buffer_head{
+    int bh_status; /* status (e.g., clean, dirty, meta) */
+    char *bh_buf;
+    unsigned int bh_pno;
 #if USE_CLLIST
     struct list_head bh_dirty_list; /* metadata buffer list for specific inode */	
 #elif USE_RBNODE
     struct rb_node bh_dirty_rbnode;
 #endif	
-    int bh_status; /* status (e.g., clean, dirty, meta) */
-    char *bh_buf;
-
 };
 
 
@@ -609,16 +611,11 @@ struct txd_journal_s
      */
     int			                j_blocksize;                                // o
     unsigned long long	        j_blk_offset;                               // o
-//    char			            j_devname[BDEVNAME_SIZE];
 
     /* Total maximum capacity of the journal region on disk. */
     unsigned int		        j_maxlen;                                   // o
 
     /* Number of buffers reserved from the running transaction 
-     * FIXME
-     * should I have to implement simple atomic increment function in inline assembly?
-     * NOTE
-     * change atomic_t to int
      */
     int		                    j_reserved_credits;                        // o
 
@@ -723,7 +720,7 @@ struct txd_journal_s
 
     /* Failed journal commit ID */
     unsigned int		        j_failed_commit;
-
+    void*                       j_private;
 };
 
 
@@ -798,7 +795,7 @@ typedef struct txd_inode_s {
 
 /* functions in "txdriver_api.c" which are txdriver core functions. */
 int tx_format(uint64_t txd_addr, uint32_t txd_size);    
-int tx_begin(uint64_t txd_addr, uint32_t txd_size); 
+txd_journal_t* tx_begin(uint64_t txd_addr, uint32_t txd_size); 
 int tx_write(uint8_t meta_buffer, uint8_t data_buffer);
 
 /*
@@ -808,7 +805,7 @@ int tx_write(uint8_t meta_buffer, uint8_t data_buffer);
 int tx_commit(void);
 int tx_abort(void);
 
-/* functions in txdriver_spdk.c  */
+/* txdriver_spdk.c  */
 int spdk_init(void);
 int spdk_alloc_qpair(void);
 int spdk_write(TXD_PARAMS *params);
@@ -816,14 +813,23 @@ int spdk_read(TXD_PARAMS *params);
 int spdk_free(void);
 void cleanup(void);
 
-/* functinos in txdriver_journal.c  */
+/* txdriver_journal.c  */
 void print_sb_info(txd_j_superblock_t *sb);
 int chk_txd_sb(txd_j_superblock_t *sb, uint32_t txd_size);
 void init_journal_header(txd_j_header_t *txd_j_header,txd_type_t blk_type,int tid );
 int do_format(TXD_PARAMS *params);
-txd_journal_t *journal_init_common(unsigned long long start, int len, int blocksize);
+txd_journal_t* txd_get_journal(txd_j_superblock_t *j_sb);
+int txd_journal_need_recovery(txd_journal_t *journal);
+int txd_wipe_journal_log(txd_journal_t *journal);
+int txd_journal_load(txd_journal_t *journal);
+int txd_journal_destroy(txd_journal_t *journal);
+txd_journal_t *txd_journal_init_common(txd_j_superblock_t *j_sb);
 
-/* atomic.c */  
+
+/* atomic.c */ 
+
+#define atomic_set(addr, newval)   atomic_xchg(addr, newval)
+
 void atomic_add( int * value, int inc_val);
 void atomic_sub( int * value, int dec_val);
 void atomic_inc( int * value);
@@ -831,7 +837,7 @@ void atomic_dec( int * value);
 int atomic_dec_and_test( int * value);
 int atomic_inc_and_test( int * value);
 int test_and_set(int *lock);
-int atomic_xchg(volatile unsigned int *addr, unsigned int newval);
+int atomic_xchg(int *addr, int newval);
 
 /* revoke.c */
 #define JOURNAL_REVOKE_DEFAULT_HASH 256
@@ -842,7 +848,6 @@ void txd_journal_destroy_revoke(txd_journal_t *journal_t);
  * FIXME 
  * need to implement
  */
-#define atomic_set(addr, newval)   atomic_xchg(addr, newval)
 
 
 #endif
