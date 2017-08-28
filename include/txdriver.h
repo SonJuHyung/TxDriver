@@ -7,6 +7,11 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 //#include <sys/type.h>
 
 #include "list.h"
@@ -101,7 +106,8 @@ struct txd_buffer_head{
 typedef struct txd_transaction_s txd_transaction_t;
 typedef struct txd_journal_s txd_journal_t;
 typedef struct txd_handle_s txd_handle_t;
-
+typedef struct txd_revoke_table_s txd_revoke_table_t;
+typedef struct txd_revoke_record_s txd_revoke_record_t;
 
 /*
  * timer to wake up commit thread.
@@ -121,23 +127,23 @@ struct timer_list {
  *  journal replay, this involves recording the transaction ID of the
  *  last transaction to revoke this block. 
  */
-typedef struct txd_revoke_record_s
+struct txd_revoke_record_s
 {
     struct list_head  hash;
     tid_t		  sequence;	/* Used for recovery only */
     unsigned long long	  blocknr;
-}txd_revoke_record_t;
+}t;
 
 
 /* The revoke table is just a simple hash table of revoke records. */
-typedef struct txd_revoke_table_s
+struct txd_revoke_table_s
 {
     /* It is conceivable that we might want a larger hash table
      * for recovery.  Must be a power of two. */
     int		  hash_size;
     int		  hash_shift;
     struct list_head *hash_table;
-}txd_revoke_table_t;
+};
 
 /*
  * Definitions which augment the buffer_head layer
@@ -493,6 +499,7 @@ struct txd_transaction_s
 
 
 typedef struct wait_queue_s{
+    int condition;
     pthread_mutex_t     wq_mtx;
     pthread_cond_t      wq_cnd;
 } wait_queue_t;
@@ -814,6 +821,9 @@ int spdk_free(void);
 void cleanup(void);
 
 /* txdriver_journal.c  */
+
+#define TXD_MIN_JOURNAL_BLOCKS 1024
+
 void print_sb_info(txd_j_superblock_t *sb);
 int chk_txd_sb(txd_j_superblock_t *sb, uint32_t txd_size);
 void init_journal_header(txd_j_header_t *txd_j_header,txd_type_t blk_type,int tid );
@@ -844,10 +854,23 @@ int atomic_xchg(int *addr, int newval);
 int txd_journal_init_revoke(txd_journal_t *journal, int hash_size);
 void txd_journal_destroy_revoke(txd_journal_t *journal_t);
 
-/*
- * FIXME 
- * need to implement
- */
+/* malloc.c  */
+/* allocate a alignment-bytes aligned buffer */
+void *txd_malloc_spdk(size_t size);
+void *txd_zmalloc_spdk(size_t size);
+void txd_free_spdk(void* buf, size_t size);
+void *txd_malloc_dpdk(size_t size);
+void *txd_zmalloc_dpdk(size_t size);
+void *txd_calloc_dpdk(size_t num, size_t size);
+void txd_free_dpdk(void *ptr, size_t size);
+void *txd_malloc(size_t size);
+void *txd_calloc(size_t num,size_t size);
+void txd_free(void *ptr, size_t size);
+void txd_allocated_mem_info(void);
 
+#define unlikely(expr)          __builtin_expect(!!(expr), 0)
+#define likely(expr)            __builtin_expect(!!(expr), 1)
+#define likely_success(expr)    unlikely(expr)
+#define likely_true(expr)       likely(expr)
 
 #endif

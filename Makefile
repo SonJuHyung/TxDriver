@@ -19,8 +19,8 @@ TXD_BIN=$(TXD_CUR)/bin
 INC = ${CURDIR}/include/
 
 # spdk, dpdk path 
-SPDK_ROOT_DIR = /home/son/git/SKT/spdk
-DPDK_DIR = /home/son/git/SKT/dpdk/dpdk-stable-17.05.1
+SPDK_ROOT_DIR = /home/son/git/skt/spdk/
+DPDK_DIR = /home/son/git/skt/dpdk/dpdk-stable-17.05.1/
 
 # spdk library path, name
 SPDK_LIBS_DIR = $(SPDK_ROOT_DIR)/build/lib
