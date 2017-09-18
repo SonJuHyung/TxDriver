@@ -5,6 +5,7 @@
 
 /* 
  * from kernel.
+ * test
  */
 
 void atomic_add( int * value, int inc_val) {
